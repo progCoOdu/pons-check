@@ -9,6 +9,7 @@ interface Props {
   comments: Record<string, string>
   docAnswers: Record<string, boolean | null>
   onBack: () => void
+  readOnly?: boolean
 }
 
 function getScoreColor(score: number) {
@@ -23,7 +24,7 @@ function getScoreLabel(score: number) {
   return 'Требует внимания'
 }
 
-export default function InspectionResult({ result, outlet, inspector, answers, comments, docAnswers, onBack }: Props) {
+export default function InspectionResult({ result, outlet, inspector, answers, comments, docAnswers, onBack, readOnly }: Props) {
   const violations = CHECKLIST.flatMap(block =>
     block.items
       .filter(item => answers[item.id] === false)
@@ -32,23 +33,27 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
 
   return (
     <div style={{ minHeight: '100%', paddingBottom: 32 }}>
-      {/* Header */}
       <div style={{
         background: getScoreColor(result.total_score),
         padding: '24px 16px', color: '#fff', textAlign: 'center',
       }}>
+        {readOnly && (
+          <button
+            onClick={onBack}
+            style={{ background: 'none', color: '#fff', fontSize: 14, fontWeight: 600, display: 'block', marginBottom: 12 }}
+          >← Назад</button>
+        )}
         <p style={{ fontSize: 13, opacity: 0.9 }}>{outlet.name}</p>
         <div style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1, marginTop: 8 }}>
           {result.total_score}%
         </div>
         <p style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{getScoreLabel(result.total_score)}</p>
         <p style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-          {new Date().toLocaleDateString('ru', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {new Date(result.created_at ?? new Date()).toLocaleDateString('ru', { day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 
       <div style={{ padding: '16px' }}>
-        {/* Block scores */}
         <div style={{ background: 'var(--color-card)', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
           <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>По блокам</p>
           {[
@@ -73,7 +78,6 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
           ))}
         </div>
 
-        {/* Violations / Prescription */}
         {violations.length > 0 && (
           <div style={{ background: '#FEF2F2', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
             <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: '#EF4444' }}>
@@ -91,7 +95,6 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
           </div>
         )}
 
-        {/* Docs */}
         <div style={{ background: 'var(--color-card)', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
           <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Документы</p>
           {DOC_CHECKLIST.map(item => (
@@ -104,7 +107,6 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
           ))}
         </div>
 
-        {/* Inspector */}
         <div style={{
           background: 'var(--color-card)', borderRadius: 14, padding: '14px', marginBottom: 20,
           display: 'flex', justifyContent: 'space-between',
@@ -116,7 +118,7 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Дата</p>
             <p style={{ fontWeight: 700, fontSize: 14 }}>
-              {new Date().toLocaleDateString('ru')}
+              {new Date(result.created_at ?? new Date()).toLocaleDateString('ru')}
             </p>
           </div>
         </div>
@@ -128,7 +130,7 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
             background: 'var(--color-accent)', color: '#fff',
             fontWeight: 800, fontSize: 16,
           }}
-        >← К объекту</button>
+        >← {readOnly ? 'К объекту' : 'К объекту'}</button>
       </div>
     </div>
   )
