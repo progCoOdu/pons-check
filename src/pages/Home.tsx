@@ -5,10 +5,10 @@ import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, Y
 
 interface Props {
   inspector: Inspector
-  isMain: boolean
+  isMain?: boolean
 }
 
-export default function Home({ inspector, isMain }: Props) {
+export default function Home({ inspector }: Props) {
   const [stats, setStats] = useState({ total: 0, thisMonth: 0, avgScore: 0, outlets: 0 })
   const [recent, setRecent] = useState<Inspection[]>([])
   const [chartData, setChartData] = useState<{ name: string; score: number }[]>([])
