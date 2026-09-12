@@ -16,6 +16,7 @@ export interface Outlet {
   outlet_phone?: string
   type: 'own' | 'franchise'
   check_interval_days: number
+  legal_entity: string
   created_at: string
 }
 
