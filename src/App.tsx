@@ -7,6 +7,18 @@ import Inspectors from './pages/Inspectors'
 import Settings from './pages/Settings'
 import Navbar from './components/Navbar'
 
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        initDataUnsafe: { user?: { id: number; first_name: string; last_name?: string; username?: string } }
+        ready: () => void
+        expand: () => void
+      }
+    }
+  }
+}
+
 const MAIN_ADMIN_ID = '6235378997'
 
 export type Page = 'home' | 'outlets' | 'inspectors' | 'settings'
