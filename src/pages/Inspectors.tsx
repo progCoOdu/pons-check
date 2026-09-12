@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import { Inspector, Inspection } from '../types'
+import { Inspector } from '../types'
 
 export default function Inspectors() {
   const [inspectors, setInspectors] = useState<Inspector[]>([])
