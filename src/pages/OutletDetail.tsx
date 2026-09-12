@@ -7,7 +7,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 interface Props {
   outlet: Outlet
   inspector: Inspector
-  isMain: boolean
+  isMain?: boolean
   onBack: () => void
 }
 
@@ -17,7 +17,7 @@ function getScoreColor(score: number) {
   return '#EF4444'
 }
 
-export default function OutletDetail({ outlet, inspector, isMain, onBack }: Props) {
+export default function OutletDetail({ outlet, inspector, onBack }: Props) {
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [showInspection, setShowInspection] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -57,7 +57,6 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
 
   return (
     <div style={{ minHeight: '100%' }}>
-      {/* Header */}
       <div style={{
         padding: '16px', background: 'var(--color-accent)',
         color: '#fff',
@@ -71,9 +70,7 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
       </div>
 
       <div style={{ padding: '16px' }}>
-        {/* Success circle + info */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-          {/* Circle */}
           <div style={{
             width: 90, height: 90, borderRadius: '50%',
             border: `4px solid ${avgScore !== null ? getScoreColor(avgScore) : '#EFEFEF'}`,
@@ -89,7 +86,6 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
               <span style={{ fontSize: 11, color: '#ccc', textAlign: 'center' }}>нет данных</span>
             )}
           </div>
-          {/* Info */}
           <div style={{ flex: 1 }}>
             <InfoRow label="Руководитель" value={outlet.manager_name} />
             <InfoRow label="Телефон" value={outlet.manager_phone} />
@@ -104,7 +100,6 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
           </div>
         </div>
 
-        {/* Chart */}
         {chartData.length > 1 && (
           <div style={{
             background: 'var(--color-card)', borderRadius: 14, padding: '14px', marginBottom: 16,
@@ -123,7 +118,6 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
           </div>
         )}
 
-        {/* Start inspection */}
         <button
           onClick={() => setShowInspection(true)}
           style={{
@@ -133,7 +127,6 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
           }}
         >🔍 Начать инспекцию</button>
 
-        {/* History */}
         {!loading && inspections.length > 0 && (
           <div>
             <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>История проверок</p>
