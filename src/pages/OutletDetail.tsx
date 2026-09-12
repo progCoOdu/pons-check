@@ -87,8 +87,9 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
             )}
           </div>
           <div style={{ flex: 1 }}>
-            <InfoRow label="Руководитель" value={outlet.manager_name} />
-            <InfoRow label="Телефон" value={outlet.manager_phone} />
+            {outlet.legal_entity && <InfoRow label="Юр. лицо" value={outlet.legal_entity} />}
+            <InfoRow label="Руководитель" value={outlet.manager_name || '—'} />
+            <InfoRow label="Телефон" value={outlet.manager_phone || '—'} />
             {outlet.outlet_phone && <InfoRow label="Тел. заведения" value={outlet.outlet_phone} />}
             <InfoRow label="Тип" value={outlet.type === 'own' ? 'Собственное' : 'Франшиза'} />
             {last && (
