@@ -1,17 +1,24 @@
 import { Page } from '../App'
 
+interface NavItem {
+  key: string
+  label: string
+  icon: string
+  mainOnly?: boolean
+}
+
 interface Props {
   page: Page
   setPage: (p: Page) => void
   isMain: boolean
 }
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Домой', icon: '🏠' },
   { key: 'outlets', label: 'Объекты', icon: '🏪' },
   { key: 'inspectors', label: 'Инспекторы', icon: '👥', mainOnly: true },
   { key: 'settings', label: 'Настройки', icon: '⚙️', mainOnly: true },
-] as const
+]
 
 export default function Navbar({ page, setPage, isMain }: Props) {
   const items = NAV_ITEMS.filter(i => !i.mainOnly || isMain)
