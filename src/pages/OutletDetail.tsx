@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { Outlet, Inspector, Inspection } from '../types'
 import InspectionFlow from './InspectionFlow'
+import InspectionResult from './InspectionResult'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface Props {
@@ -20,6 +21,7 @@ function getScoreColor(score: number) {
 export default function OutletDetail({ outlet, inspector, onBack }: Props) {
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [showInspection, setShowInspection] = useState(false)
+  const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { loadInspections() }, [])
@@ -41,6 +43,21 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
         outlet={outlet}
         inspector={inspector}
         onBack={() => { setShowInspection(false); loadInspections() }}
+      />
+    )
+  }
+
+  if (selectedInspection) {
+    return (
+      <InspectionResult
+        result={selectedInspection}
+        outlet={outlet}
+        inspector={(selectedInspection as any).inspector ?? inspector}
+        answers={selectedInspection.answers}
+        comments={selectedInspection.comments}
+        docAnswers={selectedInspection.doc_answers}
+        onBack={() => setSelectedInspection(null)}
+        readOnly
       />
     )
   }
@@ -132,11 +149,16 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
           <div>
             <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>История проверок</p>
             {inspections.map(ins => (
-              <div key={ins.id} style={{
-                background: 'var(--color-card)', borderRadius: 12,
-                padding: '12px 14px', marginBottom: 8,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
+              <div
+                key={ins.id}
+                onClick={() => setSelectedInspection(ins)}
+                style={{
+                  background: 'var(--color-card)', borderRadius: 12,
+                  padding: '12px 14px', marginBottom: 8,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  cursor: 'pointer',
+                }}
+              >
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 13 }}>
                     {new Date(ins.created_at).toLocaleDateString('ru', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -145,10 +167,13 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
                     {(ins as any).inspector?.name ?? '—'}
                   </p>
                 </div>
-                <span style={{
-                  fontWeight: 800, fontSize: 18,
-                  color: getScoreColor(ins.total_score),
-                }}>{ins.total_score}%</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    fontWeight: 800, fontSize: 18,
+                    color: getScoreColor(ins.total_score),
+                  }}>{ins.total_score}%</span>
+                  <span style={{ color: '#ccc', fontSize: 18 }}>›</span>
+                </div>
               </div>
             ))}
           </div>
