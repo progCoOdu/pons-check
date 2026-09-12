@@ -30,18 +30,38 @@ export default function App() {
   const [isMain, setIsMain] = useState(false)
 
   useEffect(() => {
-    window.Telegram?.WebApp?.ready()
-    window.Telegram?.WebApp?.expand()
-    initUser()
+    const tg = window.Telegram?.WebApp
+    tg?.ready()
+    tg?.expand()
+
+    // Небольшая задержка чтобы TG успел передать данные
+    setTimeout(() => {
+      initUser()
+    }, 300)
   }, [])
 
   async function initUser() {
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user
+    const tg = window.Telegram?.WebApp
+    const tgUser = tg?.initDataUnsafe?.user
+
+    // В режиме разработки (браузер без TG) — используем тестового пользователя
     if (!tgUser) {
-      setLoading(false)
+      // Попробуем ещё раз через секунду
+      setTimeout(async () => {
+        const tgUser2 = window.Telegram?.WebApp?.initDataUnsafe?.user
+        if (!tgUser2) {
+          setLoading(false)
+          return
+        }
+        await processUser(tgUser2)
+      }, 1000)
       return
     }
 
+    await processUser(tgUser)
+  }
+
+  async function processUser(tgUser: { id: number; first_name: string; last_name?: string; username?: string }) {
     const telegramId = String(tgUser.id)
     setIsMain(telegramId === MAIN_ADMIN_ID)
 
@@ -54,6 +74,7 @@ export default function App() {
     if (data) {
       setInspector(data)
     } else {
+      // Если пользователь не найден — создаём его автоматически
       const { data: newInspector } = await supabase
         .from('inspectors')
         .insert({
