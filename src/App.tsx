@@ -49,7 +49,7 @@ export default function App() {
     }
   }
 
-  async function processUser(telegramId: string, name: string, username?: string) {
+  async function processUser(telegramId: string, _name: string, _username?: string) {
     setIsMain(telegramId === MAIN_ADMIN_ID)
 
     const { data } = await supabase
