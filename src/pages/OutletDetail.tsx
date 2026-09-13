@@ -153,7 +153,7 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
             </span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            {[7, 14, 30, 60].map(days => (
+            {[14, 30, 60, 90, 180].map(days => (
               <button
                 key={days}
                 onClick={() => isMain && saveInterval(days)}
@@ -165,7 +165,7 @@ export default function OutletDetail({ outlet, inspector, isMain, onBack }: Prop
                   color: interval === days ? 'var(--color-accent)' : 'var(--color-text-secondary)',
                   cursor: isMain ? 'pointer' : 'default',
                 }}
-              >{days}д</button>
+              >{days >= 60 ? `${days/30}м` : `${days}д`}</button>
             ))}
           </div>
         </div>
