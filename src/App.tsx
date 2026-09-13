@@ -61,12 +61,7 @@ export default function App() {
     if (data) {
       setInspector(data)
     } else {
-      const { data: newInspector } = await supabase
-        .from('inspectors')
-        .insert({ telegram_id: telegramId, name, username })
-        .select()
-        .single()
-      setInspector(newInspector)
+      setInspector(null)
     }
     setLoading(false)
   }
@@ -119,6 +114,21 @@ export default function App() {
     )
   }
 
+  if (!loading && !showPin && !inspector) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', flexDirection: 'column', gap: 12, padding: 24,
+      }}>
+        <p style={{ fontSize: 40 }}>🔒</p>
+        <p style={{ fontWeight: 700, fontSize: 18 }}>Нет доступа</p>
+        <p style={{ color: '#888', textAlign: 'center', fontSize: 14 }}>
+          Обратитесь к администратору для получения доступа
+        </p>
+      </div>
+    )
+  }
+
   if (showPin) {
     return (
       <div style={{
@@ -126,7 +136,6 @@ export default function App() {
         justifyContent: 'center', height: '100vh', background: '#fff',
         padding: '0 32px',
       }}>
-        {/* Логотип */}
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%',
@@ -138,7 +147,6 @@ export default function App() {
           <p style={{ color: '#888', fontSize: 13, marginTop: 4 }}>Введите PIN-код для входа</p>
         </div>
 
-        {/* Точки */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
           {[0, 1, 2, 3].map(i => (
             <div key={i} style={{
@@ -149,13 +157,11 @@ export default function App() {
           ))}
         </div>
 
-        {/* Ошибка */}
         <p style={{
           color: '#EF4444', fontSize: 13, marginBottom: 24, height: 20,
           opacity: pinError ? 1 : 0, transition: 'opacity 0.2s',
         }}>Неверный PIN-код</p>
 
-        {/* Клавиатура */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, width: '100%', maxWidth: 280 }}>
           {['1','2','3','4','5','6','7','8','9','','0','←'].map((digit, i) => (
             <button
