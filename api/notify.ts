@@ -53,9 +53,8 @@ export default async function handler(req: Request) {
   outlets.forEach((outlet: any) => {
     const lastDate = lastInspectionByOutlet[outlet.id]
     if (!lastDate) {
-      overdue.push({ outlet, daysSince: 999, daysOverdue: 999 })
-      return
-    }
+  return // Пропускаем объекты без проверок
+}
 
     const last = new Date(lastDate)
     const daysSince = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24))
