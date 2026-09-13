@@ -18,11 +18,13 @@ function getScoreColor(score: number) {
   return '#EF4444'
 }
 
-export default function OutletDetail({ outlet, inspector, onBack }: Props) {
+export default function OutletDetail({ outlet, inspector, isMain, onBack }: Props) {
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [showInspection, setShowInspection] = useState(false)
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null)
   const [loading, setLoading] = useState(true)
+  const [interval, setIntervalDays] = useState(outlet.check_interval_days)
+  const [savingInterval, setSavingInterval] = useState(false)
 
   useEffect(() => { loadInspections() }, [])
 
@@ -35,6 +37,25 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
       .limit(20)
     setInspections(data ?? [])
     setLoading(false)
+  }
+
+  async function saveInterval(days: number) {
+    setSavingInterval(true)
+    await supabase.from('outlets').update({ check_interval_days: days }).eq('id', outlet.id)
+    setIntervalDays(days)
+    setSavingInterval(false)
+  }
+
+  function getCheckStatus() {
+    if (inspections.length === 0) return { label: 'Проверок не было', color: '#888', emoji: '⬜' }
+    const last = new Date(inspections[0].created_at)
+    const now = new Date()
+    const daysSince = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24))
+    const daysLeft = interval - daysSince
+
+    if (daysLeft < 0) return { label: `Просрочено на ${Math.abs(daysLeft)} дн.`, color: '#EF4444', emoji: '🔴' }
+    if (daysLeft <= 7) return { label: `Через ${daysLeft} дн.`, color: '#F59E0B', emoji: '🟡' }
+    return { label: `Через ${daysLeft} дн.`, color: '#22C55E', emoji: '🟢' }
   }
 
   if (showInspection) {
@@ -72,6 +93,8 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
     score: i.total_score,
   }))
 
+  const status = getCheckStatus()
+
   return (
     <div style={{ minHeight: '100%' }}>
       <div style={{
@@ -87,6 +110,7 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
       </div>
 
       <div style={{ padding: '16px' }}>
+        {/* Кружок + инфо */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
           <div style={{
             width: 90, height: 90, borderRadius: '50%',
@@ -118,6 +142,35 @@ export default function OutletDetail({ outlet, inspector, onBack }: Props) {
           </div>
         </div>
 
+        {/* Статус проверки */}
+        <div style={{
+          background: 'var(--color-card)', borderRadius: 14, padding: '14px', marginBottom: 16,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={{ fontWeight: 700, fontSize: 15 }}>Периодичность проверки</p>
+            <span style={{ fontSize: 13, fontWeight: 700, color: status.color }}>
+              {status.emoji} {status.label}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[7, 14, 30, 60].map(days => (
+              <button
+                key={days}
+                onClick={() => isMain && saveInterval(days)}
+                disabled={savingInterval || !isMain}
+                style={{
+                  flex: 1, padding: '8px 0', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                  border: `2px solid ${interval === days ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  background: interval === days ? 'var(--color-accent-light)' : '#fff',
+                  color: interval === days ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                  cursor: isMain ? 'pointer' : 'default',
+                }}
+              >{days}д</button>
+            ))}
+          </div>
+        </div>
+
+        {/* График */}
         {chartData.length > 1 && (
           <div style={{
             background: 'var(--color-card)', borderRadius: 14, padding: '14px', marginBottom: 16,
