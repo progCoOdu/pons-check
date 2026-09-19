@@ -12,11 +12,13 @@ interface Props {
 
 type Answers = Record<string, boolean | null>
 type Comments = Record<string, string>
+type Photos = Record<string, string>
 
 export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
   const [blockIndex, setBlockIndex] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [comments, setComments] = useState<Comments>({})
+  const [photos, setPhotos] = useState<Photos>({})
   const [docAnswers, setDocAnswers] = useState<Answers>({})
   const [showDocs, setShowDocs] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -35,6 +37,15 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
     return Math.round((passed / items.length) * block.weight)
   }
 
+  async function uploadPhoto(itemId: string, file: File): Promise<string | null> {
+    const ext = file.name.split('.').pop()
+    const path = `${outlet.id}/${Date.now()}_${itemId}.${ext}`
+    const { error } = await supabase.storage.from('inspections').upload(path, file)
+    if (error) return null
+    const { data } = supabase.storage.from('inspections').getPublicUrl(path)
+    return data.publicUrl
+  }
+
   async function finish() {
     setSaving(true)
     const score_kko = calcScore('kko')
@@ -47,7 +58,7 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
       outlet_id: outlet.id,
       inspector_id: inspector.id,
       score_kko, score_kch, score_kkp, score_kis, total_score,
-      answers, comments, doc_answers: docAnswers,
+      answers, comments, doc_answers: docAnswers, photos,
     }).select().single()
 
     setSaving(false)
@@ -55,10 +66,9 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
   }
 
   if (result) {
-    return <InspectionResult result={result} outlet={outlet} inspector={inspector} answers={answers} comments={comments} docAnswers={docAnswers} onBack={onBack} />
+    return <InspectionResult result={result} outlet={outlet} inspector={inspector} answers={answers} comments={comments} docAnswers={docAnswers} photos={photos} onBack={onBack} />
   }
 
-  // Docs block
   if (showDocs) {
     return (
       <div style={{ minHeight: '100%' }}>
@@ -74,8 +84,13 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
               item={item}
               value={docAnswers[item.id] ?? null}
               comment={comments[item.id] ?? ''}
+              photo={photos[item.id] ?? ''}
               onChange={v => setDocAnswers(p => ({ ...p, [item.id]: v }))}
               onComment={c => setComments(p => ({ ...p, [item.id]: c }))}
+              onPhoto={async (file) => {
+                const url = await uploadPhoto(item.id, file)
+                if (url) setPhotos(p => ({ ...p, [item.id]: url }))
+              }}
             />
           ))}
           <button
@@ -92,17 +107,15 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
     )
   }
 
-  const progress = ((blockIndex) / totalBlocks) * 100
+  const progress = (blockIndex / totalBlocks) * 100
 
   return (
     <div style={{ minHeight: '100%' }}>
-      {/* Header */}
       <div style={{ background: 'var(--color-accent)', padding: '16px', color: '#fff' }}>
         <button onClick={onBack} style={{ background: 'none', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>← Отмена</button>
         <p style={{ opacity: 0.85, fontSize: 12, marginBottom: 4 }}>{outlet.name}</p>
         <h2 style={{ fontWeight: 800, fontSize: 17 }}>{currentBlock.title}</h2>
         <p style={{ opacity: 0.8, fontSize: 12, marginTop: 2 }}>Блок {blockIndex + 1} из {totalBlocks}</p>
-        {/* Progress */}
         <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.3)', borderRadius: 4, height: 4 }}>
           <div style={{ width: `${progress}%`, background: '#fff', borderRadius: 4, height: '100%', transition: 'width 0.3s' }} />
         </div>
@@ -115,8 +128,13 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
             item={item}
             value={answers[item.id] ?? null}
             comment={comments[item.id] ?? ''}
+            photo={photos[item.id] ?? ''}
             onChange={v => setAnswers(p => ({ ...p, [item.id]: v }))}
             onComment={c => setComments(p => ({ ...p, [item.id]: c }))}
+            onPhoto={async (file) => {
+              const url = await uploadPhoto(item.id, file)
+              if (url) setPhotos(p => ({ ...p, [item.id]: url }))
+            }}
           />
         ))}
 
@@ -139,13 +157,25 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
   )
 }
 
-function CheckItem({ item, value, comment, onChange, onComment }: {
+function CheckItem({ item, value, comment, photo, onChange, onComment, onPhoto }: {
   item: { id: string; text: string }
   value: boolean | null
   comment: string
+  photo: string
   onChange: (v: boolean) => void
   onComment: (c: string) => void
+  onPhoto: (file: File) => Promise<void>
 }) {
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    await onPhoto(file)
+    setUploading(false)
+  }
+
   return (
     <div style={{
       background: 'var(--color-card)', borderRadius: 14,
@@ -172,18 +202,47 @@ function CheckItem({ item, value, comment, onChange, onComment }: {
           }}
         >❌ Нет</button>
       </div>
+
       {value === false && (
-        <textarea
-          value={comment}
-          onChange={e => onComment(e.target.value)}
-          placeholder="Комментарий (необязательно)..."
-          rows={2}
-          style={{
-            marginTop: 10, width: '100%', padding: '10px 12px',
-            borderRadius: 10, border: '1.5px solid var(--color-border)',
-            fontSize: 13, resize: 'none', background: '#fff',
-          }}
-        />
+        <div style={{ marginTop: 10 }}>
+          <textarea
+            value={comment}
+            onChange={e => onComment(e.target.value)}
+            placeholder="Комментарий (необязательно)..."
+            rows={2}
+            style={{
+              width: '100%', padding: '10px 12px',
+              borderRadius: 10, border: '1.5px solid var(--color-border)',
+              fontSize: 13, resize: 'none', background: '#fff',
+              marginBottom: 8,
+            }}
+          />
+
+          {/* Фото */}
+          {photo ? (
+            <div style={{ position: 'relative' }}>
+              <img src={photo} alt="фото" style={{ width: '100%', borderRadius: 10, maxHeight: 200, objectFit: 'cover' }} />
+              <p style={{ fontSize: 11, color: 'var(--color-success)', marginTop: 4 }}>✅ Фото прикреплено</p>
+            </div>
+          ) : (
+            <label style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 8, padding: '10px', borderRadius: 10,
+              border: '1.5px dashed var(--color-border)',
+              cursor: 'pointer', fontSize: 13, color: 'var(--color-text-secondary)',
+              background: '#fff',
+            }}>
+              {uploading ? '⏳ Загрузка...' : '📷 Прикрепить фото'}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+            </label>
+          )}
+        </div>
       )}
     </div>
   )
