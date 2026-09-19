@@ -11,6 +11,7 @@ interface Props {
   answers: Record<string, boolean | null>
   comments: Record<string, string>
   docAnswers: Record<string, boolean | null>
+  photos?: Record<string, string>
   onBack: () => void
   readOnly?: boolean
 }
@@ -27,7 +28,7 @@ function getScoreLabel(score: number) {
   return 'Требует внимания'
 }
 
-export default function InspectionResult({ result, outlet, inspector, answers, comments, docAnswers, onBack, readOnly }: Props) {
+export default function InspectionResult({ result, outlet, inspector, answers, comments, docAnswers, photos, onBack, readOnly }: Props) {
   const pdfRef = useRef<HTMLDivElement>(null)
 
   const violations = CHECKLIST.flatMap(block =>
@@ -67,7 +68,6 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
 
   return (
     <div style={{ minHeight: '100%', paddingBottom: 32 }}>
-      {/* Кнопка назад вне PDF */}
       {readOnly && (
         <div style={{ padding: '12px 16px', background: getScoreColor(result.total_score) }}>
           <button
@@ -77,10 +77,7 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
         </div>
       )}
 
-      {/* PDF контент */}
       <div ref={pdfRef} style={{ background: '#fff', padding: '0 0 24px 0' }}>
-
-        {/* Шапка */}
         <div style={{
           background: getScoreColor(result.total_score),
           padding: '24px 16px', color: '#fff', textAlign: 'center',
@@ -96,8 +93,6 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
         </div>
 
         <div style={{ padding: '16px' }}>
-
-          {/* Инфо об объекте */}
           <div style={{ background: '#F7F7F7', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
             <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Объект</p>
             <p style={{ fontSize: 13 }}><b>Адрес:</b> {outlet.address}</p>
@@ -105,7 +100,6 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
             {outlet.manager_name && <p style={{ fontSize: 13, marginTop: 4 }}><b>Руководитель:</b> {outlet.manager_name}</p>}
           </div>
 
-          {/* Баллы по блокам */}
           <div style={{ background: '#F7F7F7', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
             <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>По блокам</p>
             {[
@@ -130,23 +124,28 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
             ))}
           </div>
 
-          {/* Нарушения */}
           {violations.length > 0 && (
             <div style={{ background: '#FEF2F2', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
               <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: '#EF4444' }}>
                 ⚠️ Предписание ({violations.length} нарушений)
               </p>
               {violations.map((v, i) => (
-                <div key={i} style={{ borderLeft: '3px solid #EF4444', paddingLeft: 10, marginBottom: 10 }}>
+                <div key={i} style={{ borderLeft: '3px solid #EF4444', paddingLeft: 10, marginBottom: 12 }}>
                   <p style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{v.block}</p>
                   <p style={{ fontSize: 13, fontWeight: 600 }}>{v.item.text}</p>
                   {v.comment && <p style={{ fontSize: 12, color: '#666', marginTop: 2 }}>💬 {v.comment}</p>}
+                  {photos?.[v.item.id] && (
+                    <img
+                      src={photos[v.item.id]}
+                      alt="фото"
+                      style={{ width: '100%', borderRadius: 8, marginTop: 6, maxHeight: 200, objectFit: 'cover' }}
+                    />
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Документы */}
           <div style={{ background: '#F7F7F7', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
             <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Документы</p>
             {DOC_CHECKLIST.map(item => (
@@ -159,7 +158,6 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
             ))}
           </div>
 
-          {/* Инспектор и подписи */}
           <div style={{ background: '#F7F7F7', borderRadius: 14, padding: '14px', marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
@@ -180,11 +178,9 @@ export default function InspectionResult({ result, outlet, inspector, answers, c
               </p>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* Кнопки */}
       <div style={{ padding: '0 16px' }}>
         <button
           onClick={generatePDF}
