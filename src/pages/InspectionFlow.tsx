@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
-import { Outlet, Inspector, BlockKey } from '../types'
-import { CHECKLIST, DOC_CHECKLIST } from '../checklist'
+import { Outlet, Inspector, BlockKey, ChecklistBlock } from '../types'
+import { CHECKLIST_ROOM, CHECKLIST_ISLAND, DOC_CHECKLIST } from '../checklist'
 import InspectionResult from './InspectionResult'
 
 interface Props {
@@ -10,11 +10,13 @@ interface Props {
   onBack: () => void
 }
 
+type Format = 'room' | 'island'
 type Answers = Record<string, boolean | null>
 type Comments = Record<string, string>
 type Photos = Record<string, string>
 
 export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
+  const [format, setFormat] = useState<Format | null>(null)
   const [blockIndex, setBlockIndex] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [comments, setComments] = useState<Comments>({})
@@ -24,17 +26,18 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
   const [result, setResult] = useState<any>(null)
   const [saving, setSaving] = useState(false)
 
-  const currentBlock = CHECKLIST[blockIndex]
-  const totalBlocks = CHECKLIST.length
+  const checklist: ChecklistBlock[] = format === 'island' ? CHECKLIST_ISLAND : CHECKLIST_ROOM
+  const currentBlock = checklist[blockIndex]
+  const totalBlocks = checklist.length
 
-  const blockComplete = currentBlock.items.every(item => answers[item.id] !== undefined && answers[item.id] !== null)
+  const blockComplete = currentBlock?.items.every(item => answers[item.id] !== undefined && answers[item.id] !== null)
   const docsComplete = DOC_CHECKLIST.every(item => docAnswers[item.id] !== undefined && docAnswers[item.id] !== null)
 
   function calcScore(key: BlockKey) {
-    const block = CHECKLIST.find(b => b.key === key)!
-    const items = block.items
-    const passed = items.filter(i => answers[i.id] === true).length
-    return Math.round((passed / items.length) * block.weight)
+    const block = checklist.find(b => b.key === key)
+    if (!block) return 0
+    const passed = block.items.filter(i => answers[i.id] === true).length
+    return Math.round((passed / block.items.length) * block.weight)
   }
 
   async function uploadPhoto(itemId: string, file: File): Promise<string | null> {
@@ -46,7 +49,6 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
       return null
     }
     const { data } = supabase.storage.from('inspections').getPublicUrl(path)
-    console.log('Photo URL:', data.publicUrl)
     return data.publicUrl
   }
 
@@ -63,6 +65,7 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
       inspector_id: inspector.id,
       score_kko, score_kch, score_kkp, score_kis, total_score,
       answers, comments, doc_answers: docAnswers, photos,
+      format,
     }).select().single()
 
     setSaving(false)
@@ -70,14 +73,78 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
   }
 
   if (result) {
-    return <InspectionResult result={result} outlet={outlet} inspector={inspector} answers={answers} comments={comments} docAnswers={docAnswers} photos={photos} onBack={onBack} />
+    return (
+      <InspectionResult
+        result={result}
+        outlet={outlet}
+        inspector={inspector}
+        answers={answers}
+        comments={comments}
+        docAnswers={docAnswers}
+        photos={photos}
+        onBack={onBack}
+      />
+    )
   }
 
+  // Экран выбора формата
+  if (!format) {
+    return (
+      <div style={{ minHeight: '100%' }}>
+        <div style={{ background: 'var(--color-accent)', padding: '16px', color: '#fff' }}>
+          <button
+            onClick={onBack}
+            style={{ background: 'none', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 8 }}
+          >← Отмена</button>
+          <p style={{ opacity: 0.85, fontSize: 12, marginBottom: 4 }}>{outlet.name}</p>
+          <h2 style={{ fontWeight: 800, fontSize: 18 }}>Выберите формат объекта</h2>
+        </div>
+        <div style={{ padding: '24px 16px' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
+            От формата зависит чек-лист проверки
+          </p>
+          <button
+            onClick={() => setFormat('room')}
+            style={{
+              width: '100%', padding: '20px', borderRadius: 16, marginBottom: 12,
+              background: '#fff', border: '2px solid var(--color-border)',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <p style={{ fontSize: 24, marginBottom: 8 }}>🏪</p>
+            <p style={{ fontWeight: 800, fontSize: 16 }}>Отдельное помещение</p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4 }}>
+              Полный чек-лист включая сан. узел, склад, тамбур
+            </p>
+          </button>
+          <button
+            onClick={() => setFormat('island')}
+            style={{
+              width: '100%', padding: '20px', borderRadius: 16,
+              background: '#fff', border: '2px solid var(--color-border)',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <p style={{ fontSize: 24, marginBottom: 8 }}>🏝️</p>
+            <p style={{ fontWeight: 800, fontSize: 16 }}>Островок</p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4 }}>
+              Сокращённый чек-лист для торгового островка
+            </p>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Экран документов
   if (showDocs) {
     return (
       <div style={{ minHeight: '100%' }}>
         <div style={{ background: 'var(--color-accent)', padding: '16px', color: '#fff' }}>
-          <button onClick={() => setShowDocs(false)} style={{ background: 'none', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>← Назад</button>
+          <button
+            onClick={() => setShowDocs(false)}
+            style={{ background: 'none', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 12 }}
+          >← Назад</button>
           <h2 style={{ fontWeight: 800, fontSize: 18 }}>Документы</h2>
           <p style={{ opacity: 0.85, fontSize: 13 }}>Вне общего балла</p>
         </div>
@@ -116,12 +183,18 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
   return (
     <div style={{ minHeight: '100%' }}>
       <div style={{ background: 'var(--color-accent)', padding: '16px', color: '#fff' }}>
-        <button onClick={onBack} style={{ background: 'none', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>← Отмена</button>
+        <button
+          onClick={onBack}
+          style={{ background: 'none', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 8 }}
+        >← Отмена</button>
         <p style={{ opacity: 0.85, fontSize: 12, marginBottom: 4 }}>{outlet.name}</p>
         <h2 style={{ fontWeight: 800, fontSize: 17 }}>{currentBlock.title}</h2>
         <p style={{ opacity: 0.8, fontSize: 12, marginTop: 2 }}>Блок {blockIndex + 1} из {totalBlocks}</p>
         <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.3)', borderRadius: 4, height: 4 }}>
-          <div style={{ width: `${progress}%`, background: '#fff', borderRadius: 4, height: '100%', transition: 'width 0.3s' }} />
+          <div style={{
+            width: `${progress}%`, background: '#fff',
+            borderRadius: 4, height: '100%', transition: 'width 0.3s',
+          }} />
         </div>
       </div>
 
@@ -221,11 +294,13 @@ function CheckItem({ item, value, comment, photo, onChange, onComment, onPhoto }
               marginBottom: 8,
             }}
           />
-
-          {/* Фото */}
           {photo ? (
-            <div style={{ position: 'relative' }}>
-              <img src={photo} alt="фото" style={{ width: '100%', borderRadius: 10, maxHeight: 200, objectFit: 'cover' }} />
+            <div>
+              <img
+                src={photo}
+                alt="фото"
+                style={{ width: '100%', borderRadius: 10, maxHeight: 200, objectFit: 'cover' }}
+              />
               <p style={{ fontSize: 11, color: 'var(--color-success)', marginTop: 4 }}>✅ Фото прикреплено</p>
             </div>
           ) : (
