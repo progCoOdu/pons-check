@@ -41,8 +41,12 @@ export default function InspectionFlow({ outlet, inspector, onBack }: Props) {
     const ext = file.name.split('.').pop()
     const path = `${outlet.id}/${Date.now()}_${itemId}.${ext}`
     const { error } = await supabase.storage.from('inspections').upload(path, file)
-    if (error) return null
+    if (error) {
+      console.error('Upload error:', error)
+      return null
+    }
     const { data } = supabase.storage.from('inspections').getPublicUrl(path)
+    console.log('Photo URL:', data.publicUrl)
     return data.publicUrl
   }
 
